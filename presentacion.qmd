@@ -1,0 +1,565 @@
+---
+title: "Do we feel like we're moving? Explorations on subjective social mobility in Argentina."
+subtitle: "The Future of Social Mobility"  
+author:
+  - name: "José Rodríguez de la Fuente"
+    affiliation: "Instituto de Investigaciones Gino Germani, Universidad de Buenos Aires, CONICET"
+date: "3 December 2025"
+  
+format: 
+  revealjs:
+    theme: [simple, custom.scss]
+    highlight-style: espresso
+    smooth-scroll: true
+    embed-resources: true
+    width: 1280
+    height: 720
+    transition: fade
+from: markdown+emoji
+execute:
+  cache: true
+  warning: false
+  message: false
+  eval: false
+---
+
+```{r Librerías}
+# Cargar librerías necesarias
+pacman::p_load(tidyverse, haven, ggsci, jtools, nnet, huxtable, marginaleffects, sjPlot, bibliometrix, treemapify)
+```
+
+```{r Cargar datos}
+argentina2024 <- read_dta("fuentes/base2024_argentina.dta")
+
+wvs <- readRDS("fuentes/WVS_Cross-National_Wave_7_rds_v6_0.rds")
+
+load("fuentes/latinobarometro_select.RData")
+
+theme_set(theme_light())
+
+cols <- pal_locuszoom()(3)   # Cambiá el "3" si hay más niveles
+cols <- cols[c(3, 2, 1)]            # Reordená a gusto
+
+
+paises <- c("ARG", "BOL", "CHL", "URY", "BRA", "PER", "COL", "ECU", "VEN", "GUA", "MEX", "NIC", "PAN")
+
+
+base_scopus_sub <- convert2df(file = "fuentes/scopus_movilidad_subjetiva.bib", 
+                dbsource = "scopus", 
+                format = "bibtex")
+
+base_scopus_mov <- convert2df(file = "fuentes/scopus_movilidad_social.bib", 
+                               dbsource = "scopus", 
+                               format = "bibtex")
+
+base_scopus_sub <- base_scopus_sub %>% 
+  mutate(search_type = "Movilidad subjetiva")
+base_scopus_mov <- base_scopus_mov %>% 
+  mutate(search_type = "Movilidad social")
+
+base_scopus <- bind_rows(base_scopus_sub, base_scopus_mov)
+
+base_scopus <- base_scopus %>%
+  distinct(DI, .keep_all = TRUE)
+
+
+
+results <- biblioAnalysis(base_scopus_mov, sep = ";")
+
+```
+
+
+```{r Variables}
+
+argentina2024 <- argentina2024 %>% 
+  mutate(movilidad_sub = ifelse(p15 < 4, p15, NA_real_),
+         movilidad_sub = factor(movilidad_sub, 
+                                levels = c(2, 1, 3),
+                                labels = c("Ascenso", "Reproducción", "Descenso")),
+         movilidad_sub2 = ifelse(movilidad_sub == "Descenso", 1, 0),
+         cohorte = factor(case_when(o3_1 < 25 ~ "2000",
+                             o3_1 >=25 & o3_1 < 35 ~ "1990",
+                             o3_1 >=35 & o3_1 < 45 ~ "1980",
+                             o3_1 >=45 & o3_1 < 55 ~ "1970",
+                             o3_1 >=55 & o3_1 < 65 ~ "1960",
+                             o3_1 >=65 ~ "1950")),
+         genero = factor(genero, labels = c("Varón", "Mujer")), 
+         categoria = case_when(categoria_ocupacional == 1 ~ 1,
+                               categoria_ocupacional == 2 ~ 2,
+                               categoria_ocupacional >= 3 ~ 3),
+         clase_encuestado = case_when(categoria == 1 & o17 >= 3 & o17 < 7 ~ "Directivo / Propietario MG",
+                                      CIUO >= 1000 & CIUO < 2000 ~ "Directivo / Propietario MG",
+                                      (CIUO >= 2000 & CIUO < 2320) | (CIUO >= 2400 & CIUO < 3000) ~ "Profesional",
+                                      CIUO >= 2320 & CIUO < 2400 & categoria >= 2 ~ "Técnico / Administrativo",
+                                      CIUO >= 3000 & CIUO < 5000 & categoria >= 2 ~ "Técnico / Administrativo",
+                                      categoria == 1 & o17 <= 2 & ((CIUO >= 2320 & CIUO < 2400) | 
+                                                                     (CIUO >= 3000 & CIUO < 5220) |
+                                                                     (CIUO >= 5220 & CIUO < 6300) |
+                                                                     (CIUO >= 7000 & CIUO < 9000)) ~ "Pequeño propietario",
+                                      categoria == 2 & 
+                                        ((CIUO >= 5000 & CIUO < 5200) | (CIUO >=5221 & CIUO < 6000) |
+                                           (CIUO >= 6000 & CIUO < 6300) | (CIUO >= 7000 & CIUO < 9000)) ~ "Pequeño propietario",
+                                      categoria == 3 & 
+                                        ((CIUO >= 5000 & CIUO < 5200) | (CIUO >=5221 & CIUO < 6000) |
+                                           (CIUO >= 6000 & CIUO < 6300) | (CIUO >= 7000 & CIUO < 9000)) ~ "Obrero calificado",
+                                      CIUO == 210 | CIUO == 310 ~ "Obrero calificado",
+                                      (CIUO >= 5200 & CIUO < 5221) | (CIUO >= 6300 & CIUO < 7000) |
+                                        (CIUO >= 9000 & CIUO < 9998)  ~ "Obrero no calificado",
+                                      TRUE ~ NA_character_
+                                      ),
+         clase_encuestado = factor(clase_encuestado, levels = c("Directivo / Propietario MG",
+                                                       "Profesional",
+                                                       "Técnico / Administrativo",
+                                                       "Pequeño propietario",
+                                                       "Obrero calificado",
+                                                       "Obrero no calificado")),
+         clase_encuestado5 = fct_collapse(clase_encuestado,
+                                          "Directivo-profesional" = c("Directivo / Propietario MG", "Profesional"),
+                                          "Técnico-administrativo" = "Técnico / Administrativo",
+                                          "Pequeño propietario" = "Pequeño propietario",
+                                          "Obrero calificado" = "Obrero calificado",
+                                          "Obrero no calificado" = "Obrero no calificado"),
+         clase_origen = case_when(o45 %in% c(1,2) ~ "Directivo / Propietario MG",
+                                  o45 %in% c(3,4) ~ "Profesional",
+                                  o45 %in% c(5,9) ~ "Técnico / Administrativo",
+                                  o45 %in% c(6,7,8) ~ "Pequeño propietario",
+                                  o45 %in% c(10,11) ~ "Obrero calificado",
+                                  o45 %in% c(12:16) ~ "Obrero no calificado",
+                                  TRUE ~ NA_character_),
+         clase_origen = factor(clase_origen, levels = c("Directivo / Propietario MG",
+                                                       "Profesional",
+                                                       "Técnico / Administrativo",
+                                                       "Pequeño propietario",
+                                                       "Obrero calificado",
+                                                       "Obrero no calificado")),
+         clase_origen5 = fct_collapse(clase_origen,
+                                          "Directivo-profesional" = c("Directivo / Propietario MG", "Profesional"),
+                                          "Técnico-administrativo" = c("Técnico / Administrativo"),
+                                          "Pequeño propietario" = c("Pequeño propietario"),
+                                          "Obrero calificado" = c("Obrero calificado"),
+                                          "Obrero no calificado" = c("Obrero no calificado")),
+         movilidad_objetiva = case_when(clase_origen5 == clase_encuestado5 ~ "Reproducción",
+                                           clase_origen5 == "Directivo-profesional" & clase_encuestado5 == "Técnico-administrativo" ~ "Mov corta desc.",
+                                           clase_origen5 == "Directivo-profesional" & clase_encuestado5 %in% c("Pequeño propietario", "Obrero calificado", "Obrero no calificado") ~ "Mov larga desc.",
+                                           clase_origen5 == "Técnico-administrativo" & clase_encuestado5 == "Directivo-profesional" ~ "Mov corta asc.",
+                                           clase_origen5 == "Técnico-administrativo" & clase_encuestado5 == "Pequeño propietario" ~ "Mov corta desc.",
+                                           clase_origen5 == "Técnico-administrativo" & clase_encuestado5 %in% c("Obrero calificado", "Obrero no calificado") ~ "Mov larga desc.",
+                                           clase_origen5 == "Pequeño propietario" & clase_encuestado5 == "Directivo-profesional" ~ "Mov larga asc.",
+                                           clase_origen5 == "Pequeño propietario" & clase_encuestado5 == "Técnico-administrativo" ~ "Mov corta asc.",
+                                           clase_origen5 == "Pequeño propietario" & clase_encuestado5 == "Obrero calificado" ~ "Mov corta desc.",
+                                           clase_origen5 == "Pequeño propietario" & clase_encuestado5 == "Obrero no calificado" ~ "Mov larga desc.",
+                                           clase_origen5 == "Obrero calificado" & clase_encuestado5 %in% c("Directivo-profesional", "Técnico-administrativo") ~ "Mov larga asc.",
+                                           clase_origen5 == "Obrero calificado" & clase_encuestado5 == "Pequeño propietario" ~ "Mov corta asc.",
+                                           clase_origen5 == "Obrero calificado" & clase_encuestado5 == "Obrero no calificado" ~ "Mov corta desc.",
+                                           clase_origen5 == "Obrero no calificado" & clase_encuestado5 %in% c("Directivo-profesional", "Técnico-administrativo", "Pequeño propietario") ~ "Mov larga asc.",
+                                           clase_origen5 == "Obrero no calificado" & clase_encuestado5 == "Obrero calificado" ~ "Mov corta asc.",
+                                           TRUE ~ NA_character_),
+         movilidad_objetiva = factor(movilidad_objetiva, levels = c("Mov larga asc.", "Mov corta asc.", "Reproducción", "Mov corta desc.", "Mov larga desc.")),
+         movilidad_objetiva2 = case_when(movilidad_objetiva %in% c("Mov larga asc.", "Mov corta asc.") ~ "Ascenso",
+                                              movilidad_objetiva == "Reproducción" ~ "Reproducción",
+                                              movilidad_objetiva %in% c("Mov corta desc.", "Mov larga desc.") ~ "Descenso",
+                                              TRUE ~ NA_character_),
+         movilidad_objetiva2 = factor(movilidad_objetiva2, levels = c("Ascenso", "Reproducción", "Descenso")),
+         clase_subjetiva = case_when(p14 == 2 ~ "Media alta",
+                                     p14 == 3 ~ "Media",
+                                     p14 == 4 ~ "Media baja",
+                                     p14 == 5 ~ "Obrera",
+                                     p14 == 6 ~ "Baja",
+                                     TRUE ~ NA_character_),
+         clase_subjetiva = factor(clase_subjetiva,
+                                 levels = c("Media alta", "Media", "Media baja", "Obrera", "Baja")),
+         explicacion_mov1 = case_when(p19_1 %in% c(1, 3, 4) ~ "Mérito",
+                                      p19_1 %in% c(2, 5, 6, 7) ~ "Estructural",
+                                      TRUE ~ NA_character_),
+         explicacion_mov2 = case_when(p19_2 %in% c(1, 3, 4) ~ "Mérito",
+                                      p19_2 %in% c(2, 5, 6, 7) ~ "Estructural",
+                                      TRUE ~ NA_character_),
+         explicacion_mov = case_when(explicacion_mov1 == "Mérito" & explicacion_mov2 == "Mérito" ~ "Mérito",
+                                      explicacion_mov1 == "Estructural" & explicacion_mov2 == "Estructural" ~ "Estructural",
+                                      explicacion_mov1 != explicacion_mov2 ~ "Mixto",
+                                      TRUE ~ NA_character_),
+         explicacion_mov = factor(explicacion_mov, levels = c("Mérito", "Mixto", "Estructural")),
+         desigualdad = case_when(p1 == 1 ~ "Muy desigual",
+                                 p1 == 2 ~ "Algo desigual",
+                                 p1 == 3 | p1 == 4 ~ "Poco / nada desigual",
+                                 TRUE ~ NA_character_),
+         desigualdad = factor(desigualdad, levels = c("Muy desigual", "Algo desigual", "Poco / nada desigual")),
+         desigualdad_rp = case_when(p16_3 == 1 ~ "Muy desigual",
+                                    p16_3 == 2 ~ "Algo desigual",
+                                    p16_3 == 3 | p16_3 == 4 ~ "Poco / nada desigual",
+                                    TRUE ~ NA_character_),
+         desigualdad_rp = factor(desigualdad_rp, levels = c("Muy desigual", "Algo desigual", "Poco / nada desigual")),
+         desigualdad_clases = case_when(p16_4 == 1 ~ "Muy desigual",
+                                    p16_4 == 2 ~ "Algo desigual",
+                                    p16_4 == 3 | p16_4 == 4 ~ "Poco / nada desigual",
+                                    TRUE ~ NA_character_),
+         desigualdad_clases = factor(desigualdad_clases, levels = c("Muy desigual", "Algo desigual", "Poco / nada desigual"))
+         )
+
+wvs <- wvs %>% 
+  mutate(movilidad_sub = ifelse(Q56 > 0, Q56, NA_real_),
+         movilidad_sub = factor(movilidad_sub, 
+                                levels = c(1, 3, 2),
+                                labels = c("Ascenso", "Reproducción", "Descenso")),
+         cohorte = case_when(Q262 < 27 ~ "1990",
+                             Q262 >=27 & Q262 < 37 ~ "1980",
+                             Q262 >=37 & Q262 < 47 ~ "1970",
+                             Q262 >=47 & Q262 < 57 ~ "1960",
+                             Q262 >=57 & Q262 < 67 ~ "1950",
+                             Q262 >=67 ~ "1940"))
+
+latinobarometro <- latinobarometro %>% 
+  mutate(movilidad_sub = escala_pobriq_personal - escala_pobriq_padres,
+         movilidad_sub_f = case_when(
+           movilidad_sub > 0 ~ "Ascenso",
+           movilidad_sub == 0 ~ "Reproducción",
+           movilidad_sub < 0 ~ "Descenso",
+           TRUE ~ NA_character_
+         ),
+         movilidad_sub_f = factor(movilidad_sub_f, 
+                                  levels = c("Ascenso", "Reproducción", "Descenso")),
+         iso3 = countrycode::countrycode(pais,
+                                         origin = "iso3n",
+                                         destination = "iso3c")
+  )
+```
+
+# Introduction: Why Subjective Social Mobility? {background-color="#00589b"}
+
+## Advances in the study of social (occupational) mobility
+
+## The Standard Model of Social Mobility  
+
+## Why subjective social mobility?
+
+```{r Publicaciones por año}
+base_scopus %>%
+  filter(PY >= 2000) %>%
+  group_by(PY, search_type) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x = PY, y = n, fill = search_type)) +
+  geom_col() +
+  scale_fill_atlassian() +
+  labs(title = "Publications on subjective social mobility per year",
+       caption = "Source: based on SCOPUS (09/25/2025)") +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  scale_x_continuous(breaks = seq(2000, 2025, 5)) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank()
+  )
+```
+
+
+
+```{r Tendencias en América Latina}
+#WVS
+df_sum <- wvs %>%
+  filter(B_COUNTRY_ALPHA %in% paises, !is.na(movilidad_sub)) %>%
+  group_by(B_COUNTRY_ALPHA, movilidad_sub) %>%
+  summarise(n = sum(W_WEIGHT, na.rm = TRUE), .groups = "drop_last") %>%
+  group_by(B_COUNTRY_ALPHA) %>%
+  mutate(prop = n / sum(n)) %>% 
+  ungroup()
+
+asc_order <- df_sum %>%
+  group_by(B_COUNTRY_ALPHA) %>%
+  summarise(prop_asc = sum(n[movilidad_sub == "Ascenso"], na.rm = TRUE) / sum(n, na.rm = TRUE)) %>%
+  mutate(prop_asc = ifelse(is.na(prop_asc), 0, prop_asc))
+
+df_plot <- df_sum %>%
+  left_join(asc_order, by = "B_COUNTRY_ALPHA") %>%
+  mutate(B_COUNTRY_ALPHA = fct_reorder(B_COUNTRY_ALPHA, prop_asc))
+
+
+ggplot(df_plot, aes(x = B_COUNTRY_ALPHA, y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)), 
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en sudamérica 2017-2022",
+       subtitle = "Países seleccionados. Pregunta directa.",
+       caption = "Fuente: elaboración propia en base a WVS 7") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+ggsave("graficos/movilidad_sub_wvs.png", width = 8, height = 5, dpi = 300)
+
+
+#Latinobarometro
+df_sum <- latinobarometro %>%
+  filter(iso3 %in% paises, !is.na(movilidad_sub)) %>%
+  group_by(iso3, movilidad_sub_f) %>%
+  summarise(n = sum(wt, na.rm = TRUE), .groups = "drop_last") %>%
+  group_by(iso3) %>%
+  mutate(prop = n / sum(n)) %>% 
+  ungroup()
+
+asc_order <- df_sum %>%
+  group_by(iso3) %>%
+  summarise(prop_asc = sum(n[movilidad_sub_f == "Ascenso"], na.rm = TRUE) / sum(n, na.rm = TRUE)) %>%
+  mutate(prop_asc = ifelse(is.na(prop_asc), 0, prop_asc))
+
+df_plot <- df_sum %>%
+  left_join(asc_order, by = "iso3") %>%
+  mutate(iso3 = fct_reorder(iso3, prop_asc))
+
+ggplot(df_plot, aes(x = iso3, y = prop, fill = movilidad_sub_f)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en sudamérica 2020",
+       subtitle = "Países seleccionados. Pregunta indirecta.",
+       caption = "Fuente: elaboración propia en base a Latinobarómetro") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+ggsave("graficos/movilidad_sub_latinobarometro.png", width = 8, height = 5, dpi = 300)
+  
+```
+
+
+```{r Descriptivos Argentina}
+#Cohorte
+argentina2024 %>% 
+  filter(!is.na(movilidad_sub)) %>%
+  group_by(cohorte, movilidad_sub) %>%
+  tally(pondera_sin_elevar) %>% 
+  group_by(cohorte) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = cohorte, y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en Argentina según cohorte, 2024.",
+       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+
+wvs %>% 
+  filter(B_COUNTRY_ALPHA == "ARG", !is.na(movilidad_sub)) %>%
+  group_by(cohorte, movilidad_sub) %>%
+  summarise(n = sum(W_WEIGHT, na.rm = TRUE), .groups = "drop_last") %>%
+  group_by(cohorte) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = cohorte, y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en Argentina según cohorte, 2017.",
+       caption = "Fuente: elaboración propia en base a WVS 7") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+# Por clase objetiva
+argentina2024 %>% 
+  filter(!is.na(movilidad_sub), !is.na(clase_encuestado)) %>%
+  group_by(clase_encuestado, movilidad_sub) %>%
+  tally(pondera_sin_elevar) %>% 
+  group_by(clase_encuestado) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = fct_rev(clase_encuestado), y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en Argentina según clase social, 2024.",
+       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  ) +
+  coord_flip()
+
+
+# Clase subjetiva
+argentina2024 %>% 
+  filter(!is.na(movilidad_sub), !is.na(clase_subjetiva)) %>%
+  group_by(clase_subjetiva, movilidad_sub) %>%
+  tally(pondera_sin_elevar) %>% 
+  group_by(clase_subjetiva) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = fct_rev(clase_subjetiva), y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en Argentina según clase subjetiva, 2024.",
+       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  ) +
+  coord_flip()
+
+
+#Movilidad objetiva
+argentina2024 %>% 
+  filter(!is.na(movilidad_sub), !is.na(movilidad_objetiva)) %>%
+  group_by(movilidad_objetiva, movilidad_sub) %>%
+  tally(pondera_sin_elevar) %>% 
+  group_by(movilidad_objetiva) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = movilidad_objetiva, y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en Argentina según trayectorias intergeneracionales, 2024.",
+       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+# Por explicación de movilidad
+argentina2024 %>% 
+  filter(!is.na(movilidad_sub), !is.na(explicacion_mov)) %>%
+  group_by(explicacion_mov, movilidad_sub) %>%
+  tally(pondera_sin_elevar) %>% 
+  group_by(explicacion_mov) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = explicacion_mov, y = prop, fill = movilidad_sub)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+  labs(title = "Percepción de movilidad social en Argentina según tipo de justificación, 2024.",
+       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+```
+
+
+```{r Regresiones logística Movilidad Subjetiva}
+argentina2024 <- argentina2024 %>% 
+  mutate(movilidad_objetiva = fct_relevel(movilidad_objetiva, "Mov larga desc."),
+         movilidad_objetiva2 = fct_relevel(movilidad_objetiva2, "Descenso"),
+         movilidad_sub2 = factor(movilidad_sub2, levels = c(0, 1)),
+         clase_subjetiva = fct_relevel(clase_subjetiva, "Baja"),
+         explicacion_mov = fct_relevel(explicacion_mov, "Mérito"),
+         clase_encuestado5 = fct_relevel(clase_encuestado5, "Obrero no calificado"),
+         clase_origen5 = fct_relevel(clase_origen5, "Obrero no calificado"),
+         movilidad_sub = fct_relevel(movilidad_sub, "Reproducción"),
+         desigualdad = fct_relevel(desigualdad, "Muy desigual"),
+         desigualdad_rp = fct_relevel(desigualdad_rp, "Poco / nada desigual"),
+         desigualdad_clases = fct_relevel(desigualdad_clases, "Poco / nada desigual")
+         )
+
+
+mod1 <- glm(movilidad_sub2 ~ movilidad_objetiva2 + cohorte + genero,
+            data = argentina2024,
+            weights = pondera_sin_elevar,
+            family = binomial)
+
+mod2 <- glm(movilidad_sub2 ~ movilidad_objetiva2 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
+            data = argentina2024,
+            weights = pondera_sin_elevar,
+            family = binomial)
+
+export_summs(mod1, mod2, exp = TRUE,
+             error_pos = "same",
+             model.names = c("Modelo 1", "Modelo 2"),
+             stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+             scale = T,
+             robust = T)
+
+#por clase
+mod1 <- glm(movilidad_sub2 ~ clase_encuestado5 + clase_origen5 + cohorte + genero,
+            data = argentina2024,
+            weights = pondera_sin_elevar,
+            family = binomial)
+
+mod2 <- glm(movilidad_sub2 ~ clase_encuestado5 + clase_origen5 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
+            data = argentina2024,
+            weights = pondera_sin_elevar,
+            family = binomial)
+
+export_summs(mod1, mod2, exp = TRUE,
+             error_pos = "right",
+             model.names = c("Modelo 1", "Modelo 2"),
+             stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+             scale = T,
+             robust = T)
+
+
+```
+
+
+```{r Regresión multinomial}
+
+multinomial <- multinom(movilidad_sub ~ movilidad_objetiva2 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
+                        data = argentina2024,
+                        weights = pondera_sin_elevar,
+                        trace = F,
+                        model = TRUE)
+
+tidied <- tidy(multinomial)
+tidied$estimate <- exp(tidied$estimate)
+
+models <- list()
+models[["Ascenso"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Ascenso", ])
+models[["Descenso"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Descenso", ])
+
+export_summs(models,
+             error_pos = "same",
+             model.names = c("Ascenso vs Reproducción", "Descenso vs Reproducción"),
+             stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+             scale = T,
+             robust = T)
+
+DescTools::PseudoR2(multinomial, which = "McFadden")
+
+
+plot_model(multinomial, 
+           type = "est", 
+           ci.lvl = .91,
+           vline.color = "black",
+           show.p = T,
+           dot.size = 2,
+           line.size = 0.5,
+           axis.lim = c(.05, 15),
+           ) +
+  scale_color_locuszoom() +
+  labs(
+  title = "Determinantes de la movilidad subjetiva",
+  subtitle = "Categoría base: Reproducción",
+  caption = "Fuente: elaboración propia en base Encuesta PICTO 2024")
+  
+
+
+
+```
+

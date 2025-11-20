@@ -1,0 +1,29 @@
+/*-- scss:defaults --*/
+
+
+// fonts
+@import 'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap';
+
+$font-family-sans-serif: "Atkinson Hyperlegible", sans-serif;
+$presentation-heading-color: #00589b;
+$presentation-h1-font-size: 80px;
+
+/*-- scss:rules --*/
+
+.blackbox {
+  color: #F51111;
+  background-color: transparent;
+  margin: 2px;
+  padding: 5px 2px 5px 2px;
+  height: 110px;
+  border: 2px solid;
+}
+
+.code_1 {
+height: 220px;
+width: 1000px;
+}
+
+.title {
+  font-size: 70px !important;
+}
