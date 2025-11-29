@@ -88,9 +88,9 @@ argentina2024 <- argentina2024 %>%
     movilidad_sub = factor(
       movilidad_sub,
       levels = c(2, 1, 3),
-      labels = c("Upward mobility", "Social reproduction", "Downward mobility")
+      labels = c("Upward", "Reproduction", "Downward")
     ),
-    movilidad_sub2 = ifelse(movilidad_sub == "Downward mobility", 1, 0),
+    movilidad_sub2 = ifelse(movilidad_sub == "Downward", 1, 0),
     
     # Birth cohort
     cohorte = case_when(
@@ -310,19 +310,19 @@ argentina2024 <- argentina2024 %>%
     
     # Mobility explanations
     explicacion_mov1 = case_when(
-      p19_1 %in% c(1, 3, 4) ~ "Merit",
+      p19_1 %in% c(1, 3, 4) ~ "Merit / individual",
       p19_1 %in% c(2, 5, 6, 7) ~ "Structural",
       TRUE ~ NA_character_
     ),
     
     explicacion_mov2 = case_when(
-      p19_2 %in% c(1, 3, 4) ~ "Merit",
+      p19_2 %in% c(1, 3, 4) ~ "Merit / individual",
       p19_2 %in% c(2, 5, 6, 7) ~ "Structural",
       TRUE ~ NA_character_
     ),
     
     explicacion_mov = case_when(
-      explicacion_mov1 == "Merit" & explicacion_mov2 == "Merit" ~ "Merit",
+      explicacion_mov1 == "Merit / individual" & explicacion_mov2 == "Merit / individual" ~ "Merit / individual",
       explicacion_mov1 == "Structural" & explicacion_mov2 == "Structural" ~ "Structural",
       explicacion_mov1 != explicacion_mov2 ~ "Mixed",
       TRUE ~ NA_character_
@@ -330,7 +330,7 @@ argentina2024 <- argentina2024 %>%
     
     explicacion_mov = factor(
       explicacion_mov,
-      levels = c("Merit", "Mixed", "Structural")
+      levels = c("Merit / individual", "Mixed", "Structural")
     ),
     
     # Perceived inequality
@@ -412,13 +412,88 @@ latinobarometro <- latinobarometro %>%
   )
 ```
 
-# Introduction: Why Subjective Social Mobility? {background-color="#00589b"}
+# Introduction: Why Subjective Social Mobility? {background-gradient="linear-gradient(to bottom, #00589b, #17b2c3)" .white-text}
 
 ## Advances in the study of social (occupational) mobility
 
-## The Standard Model of Social Mobility  
+::: {style="font-size: 0.80em"}
+::: columns
+::: {.column width="50%"}
 
-## Why subjective social mobility?
+**International** (Hout & DiPrete, 2006):  
+- Social mobility shows a *common pattern*, but its strength varies across countries and over time.  
+- *Education* is the main factor driving both upward mobility and the intergenerational reproduction of status. 
+
+:::
+
+::: {.column width="50%"}
+**Latin America** (Torche, 2015; Solís y Boado, 2016):  
+- *High absolute rates* of intergenerational class mobility, comparable to those in today’s industrialized countries.  
+- *Upward mobility* did not always translate into *higher incomes*.  
+- Overall *social fluidity* is similar to that of European countries.  
+- Weak link between *inequality and mobility*.
+
+:::
+:::
+:::
+
+## Social mobility in the stratification process
+
+::: columns
+::: {.column width="45%"}
+
+![Source: based on Grusky (2008)](fuentes/Grusky.png){width=70%}
+
+:::
+::: {.column width="55%"}
+::: {style="font-size: 0.90em"}
+::: fragment
+- Mobility studies commonly focus on the relationship between *origins and destinations* (2).  
+- It is often assumed that the relationship between *positions and outcomes* (1) is constant, even though it actually changes over time.  
+
+- Economists simplified this issue by focusing directly on *income mobility*.
+:::
+:::
+:::
+
+:::
+
+## Why subjective social mobility? (I) 
+
+::: {style="font-size: 0.80em"}
+::: columns
+::: {.column width="45%"}
+
+**Diagnosis**:  
+
+- There is a gap between how sociology defines class or occupational mobility and *how people understand* “social mobility” in their everyday lives.  
+
+- What do people understand as upward or downward mobility? Class? Income? Housing? Consumption? Education? Lifestyle?  
+
+:::
+
+::: {.column width="55%"}
+::: fragment
+**Subjective social mobility**:  
+
+- Allows for addressing the [multidimensionality]{.mark style="background-color: #17b2c3;"} of social mobility.
+
+  - Captures a broader *range of experiences*.
+
+  - Reflects a *cognitive average* of objective mobility trajectories.
+
+  - Objective and subjective mobility do not always *align*.  
+  
+- Possible indicator of *relative deprivation*.  
+
+- Is a better *predictor* of attitudes, behaviors, health, and well-being.
+
+:::
+:::
+:::
+:::
+
+## Why subjective social mobility? (II)
 
 ::: columns
 ::: {.column width="60%"}
@@ -435,7 +510,7 @@ base_scopus %>%
   geom_col() +
   scale_fill_atlassian() +
   labs(title = "Publications on subjective and social mobility per year",
-       subtitle = "Search terms: subjective social mobility; perception of social mobility; perceived social mobility",
+       subtitle = "Search terms: subjective social mobility; perception of social mobility; perceived social \nmobility",
        caption = "Source: based on SCOPUS (09/25/2025)") +
   scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
   scale_x_continuous(breaks = seq(2000, 2025, 5)) +
@@ -451,6 +526,7 @@ base_scopus %>%
 :::
 
 ::: {.column width="40%"}
+::: fragment
 ```{r Publicaciones por país}
 #| fig-height: 4
 #| fig-width: 4
@@ -491,23 +567,65 @@ mov_soc <- pub_pais %>%
 
 mov_sub / mov_soc +
   plot_annotation(
-    title = "Countries with the most publications on mobility",
+    # title = "Countries with the highest number of \npublications on mobility",
     caption = "Source: based on SCOPUS (09/25/2025)"
-  ) +
-  theme(plot.title = element_text(size = 16))
+  ) 
 
 ```
 
 :::
 :::
+:::
 
 
-## Theories and mechanisms  
+# Methodology {background-gradient="linear-gradient(to bottom, #00589b, #17b2c3)" .white-text}
 
-# Methodology {background-color="#00589b"}
+## Objectives and data sources
+
+::: {style="font-size: 0.80em"}
+::: columns
+::: {.column width="60%"}
+
+::: fragment
 
 
-# Results {background-color="#00589b"}
+**Objective**: To explore the relationship between objective indicators of stratification (class and social mobility) and subjective mobility in Argentina.
+
+:::
+
+::: fragment
+
+**Data sources**:  
+
+- Comparative Analysis: World Values Survey (WVS) and Latinobarómetro.  
+
+- Argentina: National Survey on Argentina’s Social Structure and Equality Policies (ESAyPI, PIRC-ESA, 2024)
+  - National, urban, probability-based sample
+  - 1,500 individuals aged 18 and older.
+
+:::
+:::
+
+::: {.column width="40%"}
+::: fragment
+
+- **Direct question** (Qualitative)
+  - *Comparing your standard of living with your parents’ standard of living when they were about your age, would you say that you are better off, worse off or about the same?*
+  
+:::
+  
+::: fragment
+
+- **Indirect question** (Quantitative)
+  - Difference between the subjective status scores of children and parents  
+  
+:::
+:::
+:::
+:::
+
+
+# Results {background-gradient="linear-gradient(to bottom, #00589b, #17b2c3)" .white-text}
 
 ## Subjective mobility in Latin America (I)
 
@@ -577,7 +695,7 @@ ggplot(df_plot, aes(x = B_COUNTRY_ALPHA, y = prop, fill = movilidad_sub)) +
 
 ::: {.column width="50%"}
 ::: {style="font-size: 0.80em"}
-::: incremental
+::: fragment
 
 **World Values Survey**: direct question on subjective mobility
 
@@ -657,7 +775,7 @@ ggplot(df_plot, aes(x = iso3, y = prop, fill = movilidad_sub_f)) +
 ::: {.column width="50%"}
 
 ::: {style="font-size: 0.80em"}
-::: incremental
+::: fragment
 **Latinobarómetro**: indirect question on subjective mobility
 
 - 1 out of 4 people report having improved compared to their parents
@@ -670,13 +788,16 @@ ggplot(df_plot, aes(x = iso3, y = prop, fill = movilidad_sub_f)) +
 :::
 :::
 
-## Subjective mobility in Argentina (I)
+## Subjective mobility in Argentina (I). Cohorts
 
 ::: columns
 
 ::: {.column width="50%"}
 
 ```{r Descriptivos Argentina 1}
+#| fig-heigth: 4
+#| fig-width: 5
+
 #Cohorte
 argentina2024 %>% 
   filter(!is.na(movilidad_sub)) %>%
@@ -689,14 +810,38 @@ argentina2024 %>%
   scale_fill_manual(values = cols) +
   scale_y_continuous(labels = scales::percent_format()) +
   geom_text(aes(label = scales::percent(prop, accuracy = 1)),
-            position = position_fill(vjust = 0.5), color = "white", size = 3) +
+            position = position_fill(vjust = 0.5), color = "white", size = 3.5) +
   labs(title = "Subjective mobility in Argentina by cohort, 2024.",
        caption = "Source: own elaboration based on ESAyPI 2024.") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom"
   )
+
+# wvs %>% 
+#   filter(B_COUNTRY_ALPHA == "ARG", !is.na(movilidad_sub)) %>%
+#   group_by(cohorte, movilidad_sub) %>%
+#   summarise(n = sum(W_WEIGHT, na.rm = TRUE), .groups = "drop_last") %>%
+#   group_by(cohorte) %>%
+#   mutate(prop = n / sum(n)) %>%
+#   ggplot(aes(x = cohorte, y = prop, fill = movilidad_sub)) +
+#   geom_col(position = "fill") +
+#   scale_fill_manual(values = cols) +
+#   scale_y_continuous(labels = scales::percent_format()) +
+#   geom_text(aes(label = scales::percent(prop, accuracy = 1)),
+#             position = position_fill(vjust = 0.5), color = "white", size = 3) +
+#   labs(title = "Percepción de movilidad social en Argentina según cohorte, 2017.",
+#        caption = "Fuente: elaboración propia en base a WVS 7") +
+#   theme(
+#     legend.title = element_blank(),
+#     axis.title.x = element_blank(),
+#     axis.title.y = element_blank()
+#   )
 
 
 ```
@@ -704,27 +849,25 @@ argentina2024 %>%
 :::
 
 ::: {.column width="50%"}
+::: fragment
 
-```{r}
-wvs %>% 
-  filter(B_COUNTRY_ALPHA == "ARG", !is.na(movilidad_sub)) %>%
-  group_by(cohorte, movilidad_sub) %>%
-  summarise(n = sum(W_WEIGHT, na.rm = TRUE), .groups = "drop_last") %>%
-  group_by(cohorte) %>%
-  mutate(prop = n / sum(n)) %>%
-  ggplot(aes(x = cohorte, y = prop, fill = movilidad_sub)) +
-  geom_col(position = "fill") +
-  scale_fill_manual(values = cols) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  geom_text(aes(label = scales::percent(prop, accuracy = 1)),
-            position = position_fill(vjust = 0.5), color = "white", size = 3) +
-  labs(title = "Percepción de movilidad social en Argentina según cohorte, 2017.",
-       caption = "Fuente: elaboración propia en base a WVS 7") +
-  theme(
-    legend.title = element_blank(),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank()
-  )
+- The proportion of people who report having experienced **upward mobility** is constant over time (except among the youngest)
+- What increases over time is the perception of **social reproduction**
+- A mix of generational and life-course effects
+
+:::
+:::
+
+:::
+
+## Subjective mobility in Argentina (II). Social class
+
+::: columns
+::: {.column width="50%"}
+
+```{r Descriptivos Argentina 2.1}
+#| fig-heigth: 4
+#| fig-width: 5
 
 # Por clase objetiva
 argentina2024 %>% 
@@ -737,17 +880,34 @@ argentina2024 %>%
   geom_col(position = "fill") +
   scale_fill_manual(values = cols) +
   scale_y_continuous(labels = scales::percent_format()) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 15)) +
   geom_text(aes(label = scales::percent(prop, accuracy = 1)),
-            position = position_fill(vjust = 0.5), color = "white", size = 3) +
-  labs(title = "Percepción de movilidad social en Argentina según clase social, 2024.",
-       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+            position = position_fill(vjust = 0.5), color = "white", size = 3.5) +
+  labs(title = "Subjective mobility in Argentina by <br> **objective class**, 2024.",
+       caption = "Source: own elaboration based on ESAyPI 2024.") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    plot.title = element_markdown()
   ) +
   coord_flip()
 
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+
+```{r Descriptivos Argentina 2.2}
+#| fig-heigth: 4
+#| fig-width: 5
 
 # Clase subjetiva
 argentina2024 %>% 
@@ -761,15 +921,34 @@ argentina2024 %>%
   scale_fill_manual(values = cols) +
   scale_y_continuous(labels = scales::percent_format()) +
   geom_text(aes(label = scales::percent(prop, accuracy = 1)),
-            position = position_fill(vjust = 0.5), color = "white", size = 3) +
-  labs(title = "Percepción de movilidad social en Argentina según clase subjetiva, 2024.",
-       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+            position = position_fill(vjust = 0.5), color = "white", size = 3.5) +
+  labs(title = "Subjective mobility in Argentina by <br> **subjective class**, 2024.",
+       caption = "Source: own elaboration based on ESAyPI 2024.") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    plot.title = element_markdown()
   ) +
   coord_flip()
+
+```
+
+:::
+:::
+
+## Subjective mobility in Argentina (III). Objective social mobility
+
+::: columns
+::: {.column width="60%"}
+
+```{r Descriptivos Argentina 3}
+#| fig-heigth: 4
+#| fig-width: 6.5
 
 
 #Movilidad objetiva
@@ -779,19 +958,50 @@ argentina2024 %>%
   tally(pondera_sin_elevar) %>% 
   group_by(movilidad_objetiva) %>%
   mutate(prop = n / sum(n)) %>%
-  ggplot(aes(x = movilidad_objetiva, y = prop, fill = movilidad_sub)) +
+  ggplot(aes(x = fct_rev(movilidad_objetiva), y = prop, fill = movilidad_sub)) +
   geom_col(position = "fill") +
   scale_fill_manual(values = cols) +
   scale_y_continuous(labels = scales::percent_format()) +
   geom_text(aes(label = scales::percent(prop, accuracy = 1)),
-            position = position_fill(vjust = 0.5), color = "white", size = 3) +
-  labs(title = "Percepción de movilidad social en Argentina según trayectorias intergeneracionales, 2024.",
-       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+            position = position_fill(vjust = 0.5), color = "white", size = 3.5) +
+  labs(title = "Subjective mobility in Argentina by <br> **intergenerational pathways**, 2024.",
+       caption = "Source: own elaboration based on ESAyPI 2024.") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
-    axis.title.y = element_blank()
-  )
+    axis.title.y = element_blank(),
+    plot.title = element_markdown(),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom"
+  ) +
+  coord_flip()
+
+```
+
+:::
+
+::: {.column width="40%"}
+::: fragment
+- There is a partial correspondence between objective and subjective mobility. 
+- When upward objective mobility is more intense, upward subjective mobility increases slightly.
+
+:::
+:::
+
+:::
+
+
+
+## Subjective mobility in Argentina (IV). Mobility explanations
+
+::: columns
+::: {.column width="55%"}
+
+```{r}
+#| fig-heigth: 4
+#| fig-width: 6
 
 # Por explicación de movilidad
 argentina2024 %>% 
@@ -805,73 +1015,58 @@ argentina2024 %>%
   scale_fill_manual(values = cols) +
   scale_y_continuous(labels = scales::percent_format()) +
   geom_text(aes(label = scales::percent(prop, accuracy = 1)),
-            position = position_fill(vjust = 0.5), color = "white", size = 3) +
-  labs(title = "Percepción de movilidad social en Argentina según tipo de justificación, 2024.",
-       caption = "Fuente: elaboración propia en base a ESAyPI 2024.") +
+            position = position_fill(vjust = 0.5), color = "white", size = 3.5) +
+  labs(title = "Subjective mobility in Argentina by **progress explanations**, 2024.",
+       caption = "Source: own elaboration based on ESAyPI 2024.") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    plot.title = element_markdown(),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom"
   )
 ```
 
+:::
 
-```{r Regresiones logística Movilidad Subjetiva}
-argentina2024 <- argentina2024 %>% 
-  mutate(movilidad_objetiva = fct_relevel(movilidad_objetiva, "Mov larga desc."),
-         movilidad_objetiva2 = fct_relevel(movilidad_objetiva2, "Descenso"),
-         movilidad_sub2 = factor(movilidad_sub2, levels = c(0, 1)),
-         clase_subjetiva = fct_relevel(clase_subjetiva, "Baja"),
-         explicacion_mov = fct_relevel(explicacion_mov, "Mérito"),
-         clase_encuestado5 = fct_relevel(clase_encuestado5, "Obrero no calificado"),
-         clase_origen5 = fct_relevel(clase_origen5, "Obrero no calificado"),
-         movilidad_sub = fct_relevel(movilidad_sub, "Reproducción"),
-         desigualdad = fct_relevel(desigualdad, "Muy desigual"),
-         desigualdad_rp = fct_relevel(desigualdad_rp, "Poco / nada desigual"),
-         desigualdad_clases = fct_relevel(desigualdad_clases, "Poco / nada desigual")
-         )
+::: {.column width="45%"}
+::: {style="font-size: 0.80em"}
+::: fragment
+- Perceptions of upward mobility and social reproduction are mostly linked to individual or **meritocratic** views of progress, such as education, hard work, and ambition. 
+- Perceptions of downward mobility, in contrast, are more strongly associated with **structural** or **mixed** explanations of the factors shaping progress, such as family background, collective organization, or corruption.
 
+:::
+:::
+:::
 
-mod1 <- glm(movilidad_sub2 ~ movilidad_objetiva2 + cohorte + genero,
-            data = argentina2024,
-            weights = pondera_sin_elevar,
-            family = binomial)
+:::
 
-mod2 <- glm(movilidad_sub2 ~ movilidad_objetiva2 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
-            data = argentina2024,
-            weights = pondera_sin_elevar,
-            family = binomial)
-
-export_summs(mod1, mod2, exp = TRUE,
-             error_pos = "same",
-             model.names = c("Modelo 1", "Modelo 2"),
-             stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
-             scale = T,
-             robust = T)
-
-#por clase
-mod1 <- glm(movilidad_sub2 ~ clase_encuestado5 + clase_origen5 + cohorte + genero,
-            data = argentina2024,
-            weights = pondera_sin_elevar,
-            family = binomial)
-
-mod2 <- glm(movilidad_sub2 ~ clase_encuestado5 + clase_origen5 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
-            data = argentina2024,
-            weights = pondera_sin_elevar,
-            family = binomial)
-
-export_summs(mod1, mod2, exp = TRUE,
-             error_pos = "right",
-             model.names = c("Modelo 1", "Modelo 2"),
-             stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
-             scale = T,
-             robust = T)
-
-
-```
+## Determinants of subjective social mobility
 
 
 ```{r Regresión multinomial}
+#| fig-heigth: 5
+#| fig-width: 8
+#| fig-align: center
+
+argentina2024 <- argentina2024 %>% 
+  mutate(
+    movilidad_objetiva = fct_relevel(movilidad_objetiva, "Long downward mobility"),
+    movilidad_objetiva2 = fct_relevel(movilidad_objetiva2, "Downward mobility"),
+    movilidad_sub2 = factor(movilidad_sub2, levels = c(0, 1)),
+    clase_subjetiva = fct_relevel(clase_subjetiva, "Lower class"),
+    explicacion_mov = fct_relevel(explicacion_mov, "Merit / individual"),
+    clase_encuestado5 = fct_relevel(clase_encuestado5, "Unskilled manual worker"),
+    clase_origen5 = fct_relevel(clase_origen5, "Unskilled manual worker"),
+    movilidad_sub = fct_relevel(movilidad_sub, "Reproduction"),
+    desigualdad = fct_relevel(desigualdad, "Very unequal"),
+    desigualdad_rp = fct_relevel(desigualdad_rp, "Little or not unequal"),
+    desigualdad_clases = fct_relevel(desigualdad_clases, "Little or not unequal"),
+    cohorte = fct_relevel(cohorte, "2000")
+  )
 
 multinomial <- multinom(movilidad_sub ~ movilidad_objetiva2 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
                         data = argentina2024,
@@ -883,17 +1078,36 @@ tidied <- tidy(multinomial)
 tidied$estimate <- exp(tidied$estimate)
 
 models <- list()
-models[["Ascenso"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Ascenso", ])
-models[["Descenso"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Descenso", ])
+models[["Upward"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Upward", ])
+models[["Downward"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Downward", ])
 
-export_summs(models,
-             error_pos = "same",
-             model.names = c("Ascenso vs Reproducción", "Descenso vs Reproducción"),
-             stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
-             scale = T,
-             robust = T)
+# export_summs(models,
+#              error_pos = "same",
+#              model.names = c("Upward vs Reproduction", "Downward vs Reproduction"),
+#              stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+#              scale = T,
+#              robust = T)
+# 
+# DescTools::PseudoR2(multinomial, which = "McFadden")
 
-DescTools::PseudoR2(multinomial, which = "McFadden")
+labels <- c("Objective mobility: Upward", 
+                               "Objective mobility: Downward", 
+                               "Cohort: 1950s",
+                               "Cohort: 1960s",
+                               "Cohort: 1970s",
+                               "Cohort: 1980s",
+                               "Cohort: 1990s",
+                               "Woman",
+                               "Subjective class: Upper middle",
+                               "Subjective class: Middle",
+                               "Subjective class: Lower middle",
+                               "Subjective class: Working class",
+                               "Mob. explanation: Mixed",
+                               "Mob. explanation: Structural",
+                               "Perc. inequality: Somewhat unequal",
+                               "Perc. inequality: Little or not unequal")
+
+wrap_labels <- str_wrap(labels, width = 35)
 
 
 plot_model(multinomial, 
@@ -903,16 +1117,59 @@ plot_model(multinomial,
            show.p = T,
            dot.size = 2,
            line.size = 0.5,
-           axis.lim = c(.05, 15),
+           axis.lim = c(.05, 15)
            ) +
-  scale_color_locuszoom() +
+  scale_color_atlassian() +
+  scale_x_discrete(labels = rev(wrap_labels)) +
+  theme(
+    axis.text.x = element_text(size = 10),
+    strip.text = element_text(color = "black")
+  ) +
   labs(
-  title = "Determinantes de la movilidad subjetiva",
-  subtitle = "Categoría base: Reproducción",
-  caption = "Fuente: elaboración propia en base Encuesta PICTO 2024")
+  title = "Determinants of subjective mobility",
+  subtitle = "Reference category: Social reproduction",
+  caption = "Source: own elaboration based on PICTO Survey 2024")
   
 
 
 
 ```
 
+
+# Conclusions {background-gradient="linear-gradient(to bottom, #00589b, #17b2c3)" .white-text}  
+
+## Conclusions and next steps
+
+::: {style="font-size: 0.80em"}
+::: fragment
+
+**Direct vs. indirect measurement**:  
+
+- The direct measure captures more upward mobility, while the indirect measure captures more reproduction and downward mobility.  
+
+:::
+
+::: fragment
+
+**Argentina**:  
+
+- Objective and subjective class positions correlate only weakly with subjective mobility.  
+
+- Objective mobility does not necessarily translate into subjective mobility (*status inconsistency / spurious mobility*).  
+
+- Evidence of a *self-serving bias in causal attribution* (Structural and merit-based factors).  
+  
+:::
+
+::: fragment
+**Next steps**:  
+
+- Further develop subjective mobility measures in household surveys and assess how people situate themselves relative to their parents across multiple dimensions.
+
+:::
+:::
+
+# Thank you for your attention!
+
+{{< fa envelope >}} jrodriguez@conicet.gov.ar  
+{{< fa brands github-alt >}} https://github.com/joserodriguez86

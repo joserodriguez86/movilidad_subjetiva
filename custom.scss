@@ -19,6 +19,7 @@ $presentation-h1-font-size: 80px;
   border: 2px solid;
 }
 
+
 .code_1 {
 height: 220px;
 width: 1000px;
@@ -26,4 +27,15 @@ width: 1000px;
 
 .title {
   font-size: 70px !important;
+}
+
+.reveal section.white-text,
+.reveal section.white-text h1,
+.reveal section.white-text h2,
+.reveal section.white-text h3,
+.reveal section.white-text h4,
+.reveal section.white-text p,
+.reveal section.white-text ul,
+.reveal section.white-text li {
+  color: white !important;
 }
