@@ -7,24 +7,23 @@ library(treemapify)
 theme_set(theme_light())
 
 # Carga de fuentes 
-base_scopus_sub <- convert2df(file = "fuentes/scopus_movilidad_subjetiva.bib", 
+base_scopus_sub <- convert2df(file = "fuentes/scopus_movilidad_subjetiva_2026.bib", 
                 dbsource = "scopus", 
                 format = "bibtex")
 
-base_scopus_mov <- convert2df(file = "fuentes/scopus_movilidad_social.bib", 
+base_scopus_mov <- convert2df(file = "fuentes/scopus_movilidad_social_2026.bib", 
                                dbsource = "scopus", 
                                format = "bibtex")
 
 base_scopus_sub <- base_scopus_sub %>% 
-  mutate(search_type = "Movilidad subjetiva")
-base_scopus_mov <- base_scopus_mov %>% 
-  mutate(search_type = "Movilidad social")
-
-base_scopus <- bind_rows(base_scopus_sub, base_scopus_mov)
-
-base_scopus <- base_scopus %>%
+  mutate(search_type = "Movilidad subjetiva") %>%
   distinct(DI, .keep_all = TRUE)
 
+base_scopus_mov <- base_scopus_mov %>% 
+  mutate(search_type = "Movilidad social") %>%
+  distinct(DI, .keep_all = TRUE)
+
+base_scopus <- bind_rows(base_scopus_sub, base_scopus_mov)
 
 
 results <- biblioAnalysis(base_scopus_mov, sep = ";")
@@ -52,6 +51,41 @@ base_scopus %>%
 
 ggsave("graficos/publicaciones_anio.png", width = 8, height = 5)
 
+
+# Ratio de publicaciones
+ratio_anual <- base_scopus %>%
+  filter(PY >= 2000) %>%
+  group_by(PY, search_type) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(
+    names_from = search_type,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  mutate(
+    ratio = `Movilidad subjetiva` / `Movilidad social`,
+    porcentaje = ratio * 100
+  )
+
+ratio_anual %>%
+  ggplot(aes(x = PY, y = porcentaje)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Evolución de la literatura sobre movilidad social subjetiva",
+    subtitle = "Publicaciones de movilidad subjetiva por cada 100 publicaciones de movilidad social",
+    caption = "Fuente: elaboración propia en base a SCOPUS",
+    x = NULL,
+    y = "Publicaciones subjetivas por cada 100"
+  ) +
+  scale_x_continuous(
+    breaks = seq(2000, 2025, 5)
+  ) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%")
+  ) +
+  theme_minimal()
+
 #Publicaciones por país
 base_scopus_sub <- metaTagExtraction(base_scopus_sub, Field = "AU_CO", sep = ";")
 
@@ -62,7 +96,7 @@ pub_pais <- base_scopus_sub %>%
 
 pub_pais %>%
   count(AU_CO, sort = TRUE) %>% 
-  top_n(10) %>% 
+  slice_max(order_by = n, n = 10, with_ties = FALSE) %>% 
   ggplot(aes(area = n, fill = AU_CO, label = paste(AU_CO, n, sep = "\n"))) +
   geom_treemap() +
   geom_treemap_text(colour = "white", size = 20) +
