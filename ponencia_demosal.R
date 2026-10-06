@@ -169,7 +169,7 @@ argentina2024 <- argentina2024 %>%
     movilidad_objetiva = case_when(
       clase_origen5 == clase_encuestado5 ~ "Reproducción social",
       clase_origen5 == "Director–profesional" &
-        clase_encuestado5 == "Técnico–administrativo" ~ "Movilidad descendente corta",
+        clase_encuestado5 %in% c("Técnico–administrativo",  ~ "Movilidad descendente corta",
       clase_origen5 == "Director–profesional" &
         clase_encuestado5 %in% c(
           "Pequeño propietario / cuenta propia",
