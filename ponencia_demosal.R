@@ -1,5 +1,6 @@
 # Cargar librerías necesarias --------------
-pacman::p_load(tidyverse, haven, ggsci, jtools, nnet, huxtable, marginaleffects, sjPlot, bibliometrix, treemapify, patchwork, ggtext, ggoxford)
+pacman::p_load(tidyverse, haven, ggsci, jtools, nnet, gtsummary, huxtable,
+               marginaleffects, survey, sjPlot, bibliometrix, treemapify, patchwork, ggtext, ggoxford)
 
 theme_set(theme_light())
 
@@ -76,22 +77,34 @@ argentina2024 <- argentina2024 %>%
       categoria == 1 & o17 >= 3 & o17 < 7 ~ "Dueño de empresa grande/mediana o director",
       CIUO >= 1000 & CIUO < 2000 ~ "Dueño de empresa grande/mediana o director",
       (CIUO >= 2000 & CIUO < 2320) | (CIUO >= 2400 & CIUO < 3000) ~ "Profesional",
-      CIUO >= 2320 & CIUO < 2400 & categoria >= 2 ~ "Técnico/Administrativo",
-      CIUO >= 3000 & CIUO < 5000 & categoria >= 2 ~ "Técnico/Administrativo",
+      CIUO >= 2320 & CIUO < 2400 & categoria == 1 & o17 < 3~ "Pequeño propietario",
+      CIUO >= 2320 & CIUO < 2400 & categoria == 2 & (o24_1 == 1 | o24_2 == 1 | o24_3 == 1) ~ "Pequeño propietario",
+      CIUO >= 2320 & CIUO < 2400 & categoria == 2 & (o24_1 != 1 & o24_2 != 1 & o24_3 != 1) ~ "Técnico/Administrativo",
+      CIUO >= 2320 & CIUO < 2400 & categoria == 3 ~ "Técnico/Administrativo",
       categoria == 1 & o17 <= 2 &
-        (
-          (CIUO >= 2320 & CIUO < 2400) |
-            (CIUO >= 3000 & CIUO < 5220) |
+        (  (CIUO >= 3000 & CIUO < 5211) |
             (CIUO >= 5220 & CIUO < 6300) |
             (CIUO >= 7000 & CIUO < 9000)
-        ) ~ "Pequeño propietario / cuenta propia",
-      categoria == 2 &
+        ) ~ "Pequeño propietario",
+      categoria == 2 & (o24_1 == 1 | o24_2 == 1 | o24_3 == 1) & 
         (
-          (CIUO >= 5000 & CIUO < 5200) |
-            (CIUO >= 5221 & CIUO < 6000) |
+          (CIUO >= 3000 & CIUO < 5211) |
+            (CIUO >= 5220 & CIUO < 6000) |
             (CIUO >= 6000 & CIUO < 6300) |
             (CIUO >= 7000 & CIUO < 9000)
-        ) ~ "Pequeño propietario / cuenta propia",
+        ) ~ "Pequeño propietario",
+      categoria == 2 & (o24_1 != 1 & o24_2 != 1 & o24_3 != 1) & 
+          (CIUO >= 3000 & CIUO < 5000)
+           ~ "Técnico/Administrativo",
+      categoria == 3 & (CIUO >= 3000 & CIUO < 5000)
+      ~ "Técnico/Administrativo", 
+      categoria == 2 & (o24_1 != 1 & o24_2 != 1 & o24_3 != 1) & 
+        (
+          (CIUO >= 5000 & CIUO < 5211) |
+            (CIUO >= 5220 & CIUO < 6000) |
+            (CIUO >= 6000 & CIUO < 6300) |
+            (CIUO >= 7000 & CIUO < 9000)
+        ) ~ "Trabajador manual calificado",
       categoria == 3 &
         (
           (CIUO >= 5000 & CIUO < 5200) |
@@ -111,8 +124,8 @@ argentina2024 <- argentina2024 %>%
       levels = c(
         "Dueño de empresa grande/mediana o director",
         "Profesional",
+        "Pequeño propietario",
         "Técnico/Administrativo",
-        "Pequeño propietario / cuenta propia",
         "Trabajador manual calificado",
         "Trabajador manual no calificado"
       )
@@ -124,8 +137,8 @@ argentina2024 <- argentina2024 %>%
         "Dueño de empresa grande/mediana o director",
         "Profesional"
       ),
+      "Pequeño propietario" = "Pequeño propietario",
       "Técnico–administrativo" = "Técnico/Administrativo",
-      "Pequeño propietario / cuenta propia" = "Pequeño propietario / cuenta propia",
       "Trabajador manual calificado" = "Trabajador manual calificado",
       "Trabajador manual no calificado" = "Trabajador manual no calificado"
     ),
@@ -134,9 +147,9 @@ argentina2024 <- argentina2024 %>%
     clase_origen = case_when(
       o45 %in% c(1, 2) ~ "Dueño de empresa grande/mediana o director",
       o45 %in% c(3, 4) ~ "Profesional",
+      o45 %in% c(6, 7) ~ "Pequeño propietario",
       o45 %in% c(5, 9) ~ "Técnico/Administrativo",
-      o45 %in% c(6, 7, 8) ~ "Pequeño propietario / cuenta propia",
-      o45 %in% c(10, 11) ~ "Trabajador manual calificado",
+      o45 %in% c(8, 10, 11) ~ "Trabajador manual calificado",
       o45 %in% c(12:16) ~ "Trabajador manual no calificado",
       TRUE ~ NA_character_
     ),
@@ -146,8 +159,8 @@ argentina2024 <- argentina2024 %>%
       levels = c(
         "Dueño de empresa grande/mediana o director",
         "Profesional",
+        "Pequeño propietario",
         "Técnico/Administrativo",
-        "Pequeño propietario / cuenta propia",
         "Trabajador manual calificado",
         "Trabajador manual no calificado"
       )
@@ -159,54 +172,53 @@ argentina2024 <- argentina2024 %>%
         "Dueño de empresa grande/mediana o director",
         "Profesional"
       ),
+      "Pequeño propietario" = "Pequeño propietario",
       "Técnico–administrativo" = "Técnico/Administrativo",
-      "Pequeño propietario / cuenta propia" = "Pequeño propietario / cuenta propia",
       "Trabajador manual calificado" = "Trabajador manual calificado",
       "Trabajador manual no calificado" = "Trabajador manual no calificado"
     ),
-    
     # Movilidad objetiva
     movilidad_objetiva = case_when(
       clase_origen5 == clase_encuestado5 ~ "Reproducción social",
       clase_origen5 == "Director–profesional" &
-        clase_encuestado5 %in% c("Técnico–administrativo",  ~ "Movilidad descendente corta",
+        clase_encuestado5 == "Pequeño propietario"  ~ "Movilidad descendente corta",
       clase_origen5 == "Director–profesional" &
         clase_encuestado5 %in% c(
-          "Pequeño propietario / cuenta propia",
+          "Técnico/Administrativo",
           "Trabajador manual calificado",
           "Trabajador manual no calificado"
         ) ~ "Movilidad descendente larga",
-      clase_origen5 == "Técnico–administrativo" &
+      clase_origen5 == "Pequeño propietario" &
         clase_encuestado5 == "Director–profesional" ~ "Movilidad ascendente corta",
-      clase_origen5 == "Técnico–administrativo" &
-        clase_encuestado5 == "Pequeño propietario / cuenta propia" ~ "Movilidad descendente corta",
-      clase_origen5 == "Técnico–administrativo" &
+      clase_origen5 == "Pequeño propietario" &
+        clase_encuestado5 == "Técnico–administrativo" ~ "Movilidad descendente corta",
+      clase_origen5 == "Pequeño propietario" &
         clase_encuestado5 %in% c(
           "Trabajador manual calificado",
           "Trabajador manual no calificado"
         ) ~ "Movilidad descendente larga",
-      clase_origen5 == "Pequeño propietario / cuenta propia" &
+      clase_origen5 == "Técnico–administrativo" &
         clase_encuestado5 == "Director–profesional" ~ "Movilidad ascendente larga",
-      clase_origen5 == "Pequeño propietario / cuenta propia" &
-        clase_encuestado5 == "Técnico–administrativo" ~ "Movilidad ascendente corta",
-      clase_origen5 == "Pequeño propietario / cuenta propia" &
+      clase_origen5 == "Técnico–administrativo" &
+        clase_encuestado5 == "Pequeño propietario" ~ "Movilidad ascendente corta",
+      clase_origen5 == "Técnico–administrativo" &
         clase_encuestado5 == "Trabajador manual calificado" ~ "Movilidad descendente corta",
-      clase_origen5 == "Pequeño propietario / cuenta propia" &
+      clase_origen5 == "Técnico–administrativo" &
         clase_encuestado5 == "Trabajador manual no calificado" ~ "Movilidad descendente larga",
       clase_origen5 == "Trabajador manual calificado" &
         clase_encuestado5 %in% c(
           "Director–profesional",
-          "Técnico–administrativo"
+          "Pequeño propietario"
         ) ~ "Movilidad ascendente larga",
       clase_origen5 == "Trabajador manual calificado" &
-        clase_encuestado5 == "Pequeño propietario / cuenta propia" ~ "Movilidad ascendente corta",
+        clase_encuestado5 == "Técnico–administrativo" ~ "Movilidad ascendente corta",
       clase_origen5 == "Trabajador manual calificado" &
         clase_encuestado5 == "Trabajador manual no calificado" ~ "Movilidad descendente corta",
       clase_origen5 == "Trabajador manual no calificado" &
         clase_encuestado5 %in% c(
           "Director–profesional",
           "Técnico–administrativo",
-          "Pequeño propietario / cuenta propia"
+          "Pequeño propietario"
         ) ~ "Movilidad ascendente larga",
       clase_origen5 == "Trabajador manual no calificado" &
         clase_encuestado5 == "Trabajador manual calificado" ~ "Movilidad ascendente corta",
@@ -472,7 +484,7 @@ ratio_anual %>%
   geom_point(size = 2) +
   labs(
     title = "Evolución de la literatura sobre movilidad social subjetiva",
-    subtitle = "Publicaciones de movilidad subjetiva por cada 100 publicaciones de movilidad social",
+    subtitle = "Publicaciones de movilidad subjetiva por cada 100 publicaciones \nde movilidad social",
     caption = "Fuente: elaboración propia en base a SCOPUS",
     x = NULL,
     y = NULL
@@ -481,11 +493,37 @@ ratio_anual %>%
     breaks = seq(2000, 2026, 2)
   ) +
   scale_y_continuous(
-    labels = function(x) paste0(x, "%")
-  )
+    labels = function(x) paste0(x, "%"), breaks = seq(0, 12, 2))
 
-ggsave("graficos/publicaciones_ratio.png", width = 7, height = 4, dpi = 300)
+ggsave("graficos/publicaciones_ratio.png", width = 6, height = 4, dpi = 300)
 
+
+# Descriptivos ESAyPI---------------
+theme_gtsummary_language("es", decimal.mark = ",", big.mark = ".")
+
+argentina2024 %>%
+  filter(!is.na(clase_origen), !is.na(clase_encuestado)) %>%
+  svydesign(data = ., ids = ~ 1, weights = ~pondera_sin_elevar) %>%
+  tbl_svysummary(include = c(movilidad_sub, movilidad_objetiva, clase_encuestado, 
+                             clase_origen, clase_subjetiva, cohorte, genero,
+                             explicacion_mov, desigualdad),
+                 label = c(movilidad_sub ~ "Movilidad subjetiva",
+                           movilidad_objetiva ~ "Movilidad objetiva",
+                           clase_encuestado ~ "Clase social encuestado",
+                           clase_origen ~ "Clase social de origen",
+                           clase_subjetiva ~ "Clase social subjetiva",
+                           cohorte ~ "Cohorte de nacimiento",
+                           genero ~ "Género",
+                           explicacion_mov ~ "Explicación de la movilidad",
+                           desigualdad ~ "Desigualdad percibida"),
+                 statistic = list(
+                   all_continuous() ~ "{mean} ({sd})",
+                   all_categorical() ~ "{n} ({p}%)"),
+                 digits = list(all_categorical() ~ c(0, 1),
+                               all_continuous() ~ c(0, 1)),
+                 missing = "no")  %>%
+  as_flex_table() %>%
+  flextable::save_as_docx(path = "tablas/tabla_descriptiva.docx")
 
 # Resultados ----------------
 ## Tendencias wvs -------------------
@@ -523,7 +561,7 @@ ggplot(df_plot, aes(x = B_COUNTRY_ALPHA, y = prop, fill = movilidad_sub)) +
     axis.title.y = element_blank()
   )
 
-ggsave("graficos/movilidad_sub_wvs.png", width = 7, height = 4, dpi = 300)
+ggsave("graficos/movilidad_sub_wvs.png", width = 6, height = 4, dpi = 300)
 
 
 ## Tendencias Latinobarometro ---------------
@@ -559,7 +597,7 @@ ggplot(df_plot, aes(x = iso3, y = prop, fill = movilidad_sub_f)) +
     axis.title.y = element_blank()
   )
 
-ggsave("graficos/movilidad_sub_latinobarometro.png", width = 7, height = 4, dpi = 300)
+ggsave("graficos/movilidad_sub_latinobarometro.png", width = 6, height = 4, dpi = 300)
 
 
 ## Cohorte Argentina ----
@@ -583,7 +621,7 @@ argentina2024 %>%
     axis.title.y = element_blank()
   )
 
-ggsave("graficos/movilidad_sub_cohorte_arg1.png", width = 7, height = 4, dpi = 300)
+ggsave("graficos/movilidad_sub_cohorte_arg1.png", width = 6, height = 4, dpi = 300)
 
 
 wvs %>% 
@@ -749,7 +787,7 @@ argentina2024 %>%
     legend.position = "bottom"
   )
 
-ggsave("graficos/movilidad_sub_explicaciones.png", width = 8, height = 5, dpi = 300)
+ggsave("graficos/movilidad_sub_explicaciones.png", width = 7, height = 5, dpi = 300)
 
 argentina2024 %>% 
   filter(!is.na(movilidad_objetiva), !is.na(explicacion_mov)) %>%
@@ -777,3 +815,89 @@ argentina2024 %>%
   )
 
 ggsave("graficos/movilidad_obj_explicaciones.png", width = 8, height = 5, dpi = 300)
+
+
+## Determinantes de la movilidad -----------
+argentina_reg <- argentina2024 %>% 
+  filter(!is.na(clase_encuestado5), !is.na(clase_origen5)) %>% 
+  mutate(
+    movilidad_objetiva = fct_relevel(movilidad_objetiva, 
+                                     "Movilidad descendente larga"),
+    movilidad_objetiva2 = fct_relevel(movilidad_objetiva2, "Movilidad descendente"),
+    movilidad_sub2 = factor(movilidad_sub2, levels = c(0, 1)),
+    clase_subjetiva = fct_relevel(clase_subjetiva, "Clase baja"),
+    explicacion_mov = fct_relevel(explicacion_mov, "Mérito / individual"),
+    clase_encuestado5 = fct_relevel(clase_encuestado5, "Trabajador manual no calificado"),
+    clase_origen5 = fct_relevel(clase_origen5, "Trabajador manual no calificado"),
+    movilidad_sub = fct_relevel(movilidad_sub, "Reproducción"),
+    desigualdad = fct_relevel(desigualdad, "Muy desigual"),
+    desigualdad_rp = fct_relevel(desigualdad_rp, "Poco o nada desigual"),
+    desigualdad_clases = fct_relevel(desigualdad_clases, "Poco o nada desigual"),
+    cohorte = fct_relevel(cohorte, "2000")
+  )
+
+multinomial <- multinom(movilidad_sub ~ movilidad_objetiva2 + cohorte + genero + clase_subjetiva + explicacion_mov + desigualdad,
+                        data = argentina_reg,
+                        weights = pondera_sin_elevar,
+                        trace = F,
+                        model = TRUE)
+
+tidied <- tidy(multinomial)
+tidied$estimate <- exp(tidied$estimate)
+
+models <- list()
+models[["Ascendente"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Ascendente", ])
+models[["Descendente"]] <- tidy_replace(multinomial, tidied[tidied$y.level == "Descendente", ])
+
+# export_summs(models,
+#              error_pos = "same",
+#              model.names = c("Ascendente vs Reproducción", "Descendente vs Reproducción"),
+#              stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+#              scale = T,
+#              robust = T)
+# 
+# DescTools::PseudoR2(multinomial, which = "McFadden")
+
+etiquetas <- c("Movilidad objetiva: Ascendente", 
+               "Movilidad objetiva: Reproducción",
+               "Cohorte: 1940",
+               "Cohorte: 1950",
+               "Cohorte: 1960",
+               "Cohorte: 1970",
+               "Cohorte: 1980",
+               "Cohorte: 1990",
+               "Mujer",
+               "Clase subjetiva: Clase media alta",
+               "Clase subjetiva: Clase media",
+               "Clase subjetiva: Clase media baja",
+               "Clase subjetiva: Clase trabajadora",
+               "Explicación mov.: Mixta",
+               "Explicación mov.: Estructural",
+               "Desigualdad percibida: Algo desigual",
+               "Desigualdad percibida: Poco o nada desigual")
+
+etiquetas_ajustadas <- str_wrap(etiquetas, width = 35)
+
+
+plot_model(multinomial, 
+           type = "est", 
+           ci.lvl = .91,
+           vline.color = "black",
+           show.p = T,
+           dot.size = 2,
+           line.size = 0.5,
+           axis.lim = c(.05, 15)
+) +
+  scale_color_atlassian() +
+  scale_x_discrete(labels = rev(etiquetas_ajustadas)) +
+  theme(
+    axis.text.x = element_text(size = 10),
+    strip.text = element_text(color = "black")
+  ) +
+  labs(
+    title = "Determinantes de la movilidad subjetiva",
+    subtitle = "Categoría de referencia: Reproducción social",
+    caption = "Fuente: elaboración propia en base a ESAyPI 2024")
+
+ggsave("graficos/determinantes_movilidad_subjetiva.png", width = 8, height = 6, dpi = 300)
+
